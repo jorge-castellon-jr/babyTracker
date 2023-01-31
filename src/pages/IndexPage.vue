@@ -66,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Tracker } from 'components/models';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { Button } from 'components/models';
+import { onMounted, reactive, ref } from 'vue';
 import { useTabStore } from 'src/stores/tab-store';
 import { supabase } from 'src/lib/supabaseClient';
 
