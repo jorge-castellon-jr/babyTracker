@@ -30,7 +30,7 @@
           <div
             v-for="(stat, i) in tracking"
             :key="i"
-            class="col-6 col-md-4 justify-center q-pa-sm"
+            class="col-12 col-sm-6 col-md-4 justify-center q-pa-sm"
           >
             <q-card bordered flat>
               <q-card-section>
