@@ -76,6 +76,7 @@
         <div class="row" style="width: calc(100vw - 32px)">
           <div class="col full-width">
             <div class="text-h2 q-pb-lg">Options</div>
+            <div class="text-h6">Current User: {{ current_user.email }}</div>
             <q-btn @click="logOut">Sign Out</q-btn>
           </div>
         </div>
@@ -86,7 +87,7 @@
 
 <script setup lang="ts">
 import { Button } from 'components/models';
-import { onMounted, reactive, ref, watchEffect } from 'vue';
+import { computed, onMounted, reactive, ref, watchEffect } from 'vue';
 import { useTabStore } from 'src/stores/tab-store';
 import { supabase } from 'src/lib/supabaseClient';
 import { useRouter } from 'vue-router';
@@ -182,9 +183,13 @@ const logOut = async () => {
 };
 
 const user = supabase.auth.getUser();
+
+const current_user = ref();
+
 onMounted(async () => {
   storeTab.doneLoading();
   const active_user = (await user).data.user;
+  current_user.value = active_user;
   watchEffect(async () => {
     if (!active_user) {
       console.log('user', active_user);
