@@ -32,7 +32,7 @@
             :key="i"
             class="col-12 col-sm-6 col-md-4 justify-center q-pa-sm"
           >
-            <q-card bordered flat>
+            <q-card bordered flat @click="statOpen[i] = !statOpen[i]">
               <q-card-section>
                 <div class="row">
                   <div class="col-6">
@@ -56,8 +56,27 @@
               <q-card-section>
                 <div class="text-h5 text-center">{{ i }}</div>
               </q-card-section>
-              <!-- {{ stat }} -->
+              <q-slide-transition>
+                <div v-show="statOpen[i]">
+                  <q-separator />
+                  <q-card-section class="text-subitle2">
+                    <q-list bordered separator>
+                      <q-item v-for="time in stat" :key="time">
+                        {{ getReadableTime(time) }}
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </div>
+              </q-slide-transition>
             </q-card>
+          </div>
+        </div>
+      </q-tab-panel>
+      <q-tab-panel name="settings">
+        <div class="row" style="width: calc(100vw - 32px)">
+          <div class="col full-width">
+            <div class="text-h2 q-pb-lg">Options</div>
+            <q-btn @click="logOut">Sign Out</q-btn>
           </div>
         </div>
       </q-tab-panel>
@@ -67,11 +86,13 @@
 
 <script setup lang="ts">
 import { Button } from 'components/models';
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watchEffect } from 'vue';
 import { useTabStore } from 'src/stores/tab-store';
 import { supabase } from 'src/lib/supabaseClient';
+import { useRouter } from 'vue-router';
 
 const storeTab = useTabStore();
+const router = useRouter();
 
 const buttons = ref<Button[]>([
   {
@@ -122,9 +143,11 @@ const track = async (name: string) => {
 
   t[name].push(current_time);
 
-  const { error } = await supabase
-    .from('trackers')
-    .insert({ name: name, created_at: current_time });
+  const { error } = await supabase.from('trackers').insert({
+    name: name,
+    created_at: current_time,
+    user_id: (await user).data.user?.id,
+  });
 
   if (error) {
     console.log(error);
@@ -138,14 +161,48 @@ const get24hrs = reactive((name: string) => {
   return last24.length;
 });
 
-onMounted(async () => {
-  const { data } = await supabase.from('trackers').select();
-  console.log(
-    data?.map((d) => {
-      tracking.value[d.name].push(d.created_at);
-    })
-  );
+const doubleDigit = (num) => {
+  return num < 10 ? '0' + num : num;
+};
 
-  tracking.value;
+const getReadableTime = reactive((time: string) => {
+  const read = new Date(time);
+  return `${read.toDateString()} ${doubleDigit(read.getHours())}:${doubleDigit(
+    read.getMinutes()
+  )}:${doubleDigit(read.getSeconds())}`;
+});
+
+const statOpen = ref<boolean[]>([]);
+
+const logOut = async () => {
+  storeTab.doneLoading();
+  await supabase.auth.signOut();
+  storeTab.loggedOut();
+  router.push('/login');
+};
+
+const user = supabase.auth.getUser();
+onMounted(async () => {
+  storeTab.doneLoading();
+  const active_user = (await user).data.user;
+  watchEffect(async () => {
+    if (!active_user) {
+      console.log('user', active_user);
+
+      storeTab.doneLoading();
+      router.push('/login');
+    } else {
+      storeTab.loggedIn();
+    }
+  });
+
+  const { data } = await supabase
+    .from('trackers')
+    .select('*')
+    .eq('user_id', active_user?.id);
+  console.log(data);
+  data?.map((d) => {
+    tracking.value[d.name].push(d.created_at);
+  });
 });
 </script>
