@@ -65,9 +65,8 @@ const login = async (email: string, password: string) => {
   if (error) {
     setError(error);
   } else if (data.user) {
-    storeTab.doneLoading();
+    storeTab.doneLoading('/');
     storeTab.loggedIn();
-    router.push('/');
   }
 };
 const user = supabase.auth.getUser();
@@ -78,9 +77,8 @@ onMounted(() => {
     if (active_user) {
       console.log('user', active_user);
 
-      storeTab.doneLoading();
+      storeTab.doneLoading('/');
       storeTab.loggedIn();
-      router.push('/');
     }
   });
 });

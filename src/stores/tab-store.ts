@@ -16,14 +16,20 @@ export const useTabStore = defineStore('tab', {
     changeTab(tab: string) {
       this.tab = tab;
     },
-    doneLoading() {
+    doneLoading(to = '') {
       this.loading = true;
-      setTimeout(() => (this.loading = false), 750);
+      setTimeout(() => ((this.loading = false), this.router.push(to)), 750);
+      this.tab = 'action';
     },
     setAlertMessage(message: string, type = '') {
       this.alertMessage = message;
       this.alertType = type;
       this.alert = true;
+      console.log('set to true');
+      setTimeout(() => {
+        this.alert = false;
+        console.log('set to false');
+      }, 3000);
     },
     loggedIn() {
       this.isLoggedIn = true;

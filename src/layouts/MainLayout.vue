@@ -5,7 +5,7 @@
     </q-page-container>
 
     <q-footer v-if="storeTab.isLoggedIn">
-      <q-tabs v-model="current_tab" class="bg-indigo-5" align="justify">
+      <q-tabs v-model="storeTab.tab" class="bg-indigo-5" align="justify">
         <q-tab
           v-for="tab in tabs"
           :key="tab.name"
@@ -17,6 +17,7 @@
       </q-tabs>
     </q-footer>
     <loading-screen />
+    <AlertMessage />
   </q-layout>
 </template>
 
@@ -24,6 +25,7 @@
 import { ref } from 'vue';
 import { useTabStore } from 'src/stores/tab-store';
 import LoadingScreen from 'src/components/LoadingScreen.vue';
+import AlertMessage from 'src/components/MainAlert.vue';
 
 const storeTab = useTabStore();
 
@@ -32,5 +34,4 @@ const tabs = ref([
   { name: 'stats', icon: 'mdi-chart-line', label: 'Data' },
   { name: 'settings', icon: 'mdi-cog', label: 'Options' },
 ]);
-const current_tab = ref<string>('action');
 </script>

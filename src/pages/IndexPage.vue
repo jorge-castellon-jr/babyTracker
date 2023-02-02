@@ -1,6 +1,6 @@
 <template>
   <q-page class="row items-center justify-center">
-    <q-tab-panels v-model="storeTab.tab" animated>
+    <q-tab-panels v-model="store.tab" animated>
       <q-tab-panel name="action">
         <div class="row justify-center">
           <div
@@ -25,8 +25,13 @@
         </div>
       </q-tab-panel>
       <q-tab-panel name="stats">
-        <div class="row justify-center">
+        <div class="row justify-center" style="margin-bottom: 72px">
           <!-- {{ tracking }} -->
+          <div class="col-12">
+            <div class="text-h3 text-center">
+              Last Reset: <br />{{ getReadableTime(resetTime) }}
+            </div>
+          </div>
           <div
             v-for="(stat, i) in tracking"
             :key="i"
@@ -45,10 +50,10 @@
                   </div>
                   <div class="col-6">
                     <div class="text-h2 text-center">
-                      {{ stat.length }}
+                      {{ getSinceLastReset(i) }}
                     </div>
                     <div class="text-subtitle2 text-center text-grey">
-                      All Time
+                      Since Last Reset
                     </div>
                   </div>
                 </div>
@@ -71,6 +76,23 @@
             </q-card>
           </div>
         </div>
+        <q-card
+          class="fixed"
+          style="
+            bottom: 72px;
+            left: 0px;
+            width: 100%;
+            border-top: solid 1px #ddd;
+            border-radius: 0;
+          "
+          flat
+        >
+          <q-card-section>
+            <q-btn class="full-width" color="indigo-9" @click="resetTimer"
+              >Reset</q-btn
+            >
+          </q-card-section>
+        </q-card>
       </q-tab-panel>
       <q-tab-panel name="settings">
         <div class="row" style="width: calc(100vw - 32px)">
@@ -90,10 +112,8 @@ import { Button } from 'components/models';
 import { computed, onMounted, reactive, ref, watchEffect } from 'vue';
 import { useTabStore } from 'src/stores/tab-store';
 import { supabase } from 'src/lib/supabaseClient';
-import { useRouter } from 'vue-router';
 
-const storeTab = useTabStore();
-const router = useRouter();
+const store = useTabStore();
 
 const buttons = ref<Button[]>([
   {
@@ -152,12 +172,41 @@ const track = async (name: string) => {
 
   if (error) {
     console.log(error);
+    store.setAlertMessage(`Something went wrong, ${error}`, 'error');
+  } else {
+    store.setAlertMessage(`${name} was tracked successfully`, 'success');
+  }
+};
+
+const resetTime = ref('');
+
+const resetTimer = async () => {
+  const current_time = new Date();
+
+  const { error } = await supabase.from('resets').insert({
+    created_at: current_time,
+    user_id: (await user).data.user?.id,
+  });
+
+  if (error) {
+    console.log(error);
+    store.setAlertMessage(`Something went wrong, ${error}`, 'error');
+  } else {
+    resetTime.value = current_time;
+    store.setAlertMessage('Reset was successfully', 'success');
   }
 };
 
 const get24hrs = reactive((name: string) => {
   const last24 = tracking.value[name].filter((t) => {
     return new Date(t).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+  });
+  return last24.length;
+});
+
+const getSinceLastReset = reactive((name: string) => {
+  const last24 = tracking.value[name].filter((t) => {
+    return new Date(t).getTime() > new Date(resetTime.value).getTime();
   });
   return last24.length;
 });
@@ -170,16 +219,15 @@ const getReadableTime = reactive((time: string) => {
   const read = new Date(time);
   return `${read.toDateString()} ${doubleDigit(read.getHours())}:${doubleDigit(
     read.getMinutes()
-  )}:${doubleDigit(read.getSeconds())}`;
+  )}`;
 });
 
 const statOpen = ref<boolean[]>([]);
 
 const logOut = async () => {
-  storeTab.doneLoading();
+  store.doneLoading('/login');
   await supabase.auth.signOut();
-  storeTab.loggedOut();
-  router.push('/login');
+  store.loggedOut();
 };
 
 const user = supabase.auth.getUser();
@@ -187,27 +235,37 @@ const user = supabase.auth.getUser();
 const current_user = ref();
 
 onMounted(async () => {
-  storeTab.doneLoading();
+  store.doneLoading();
   const active_user = (await user).data.user;
   current_user.value = active_user;
   watchEffect(async () => {
     if (!active_user) {
       console.log('user', active_user);
 
-      storeTab.doneLoading();
-      router.push('/login');
+      store.doneLoading('/login');
     } else {
-      storeTab.loggedIn();
+      store.loggedIn();
     }
   });
 
-  const { data } = await supabase
+  const { data: trackerData } = await supabase
     .from('trackers')
     .select('*')
     .eq('user_id', active_user?.id);
-  console.log(data);
-  data?.map((d) => {
+
+  const { data: resetData } = await supabase
+    .from('resets')
+    .select('*')
+    .eq('user_id', active_user?.id)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  console.log(resetData);
+
+  trackerData?.map((d) => {
     tracking.value[d.name].push(d.created_at);
   });
+
+  resetTime.value = resetData[0].created_at;
 });
 </script>
