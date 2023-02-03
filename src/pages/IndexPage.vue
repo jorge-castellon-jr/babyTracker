@@ -1,7 +1,7 @@
 <template>
   <q-page class="row items-center justify-center">
     <q-tab-panels v-model="store.tab" animated>
-      <q-tab-panel name="action">
+      <q-tab-panel name="action" class="q-pa-sm">
         <div class="row justify-center">
           <div
             v-for="button in buttons"
