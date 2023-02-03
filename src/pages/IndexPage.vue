@@ -6,11 +6,11 @@
           <div
             v-for="button in buttons"
             :key="button.name"
-            class="col-6 col-md-4 justify-center q-pa-sm"
+            class="col-6 col-md-4 q-pa-xs"
           >
             <q-btn
               class="full-width self-stretch"
-              size="xl"
+              size="lg"
               color="indigo-9"
               style="height: 150px"
               @click="track(button.name)"
@@ -18,8 +18,18 @@
               stack
               glossy
             >
-              <q-icon :name="button.icon" size="xl" />
-              <div>{{ button.name }}</div>
+              <div class="row items-center full-width">
+                <div class="col-4">
+                  <q-icon :name="button.icon" size="xl" />
+                </div>
+                <div class="col-8">
+                  <div>{{ button.name }}</div>
+                  <div class="text-subtitle2 text-grey text-lowercase">
+                    {{ checkLast(button.name) }}
+                    ago
+                  </div>
+                </div>
+              </div>
             </q-btn>
           </div>
         </div>
@@ -28,8 +38,8 @@
         <div class="row justify-center" style="margin-bottom: 72px">
           <!-- {{ tracking }} -->
           <div class="col-12">
-            <div class="text-h3 text-center">
-              Last Reset: <br />{{ getReadableTime(resetTime) }}
+            <div class="text-h4 text-center">
+              Last Reset: <br />{{ timeBetween(resetTime) }} ago
             </div>
           </div>
           <div
@@ -178,6 +188,37 @@ const track = async (name: string) => {
   }
 };
 
+const checkLast = (name: string) => {
+  const last_time = tracking.value[name];
+  // console.log(last_time);
+  if (!last_time[0]) return 'N/A';
+
+  last_time.sort((a: string, b: string) => new Date(b) - new Date(a));
+
+  return timeBetween(last_time[0]);
+};
+
+const timeBetween = (start_date: string) => {
+  const start = new Date(start_date).getTime();
+  const end = new Date().getTime();
+
+  const time_between = Math.abs(end - start);
+  const minutes = Math.floor(time_between / 1000 / 60) + 'm';
+  const hoursExact = time_between / 1000 / 60 / 60;
+
+  const hours =
+    Math.floor(hoursExact) +
+    'h ' +
+    Math.floor((hoursExact - Math.floor(hoursExact)) * 60) +
+    'm';
+
+  return time_between < 1000 * 60
+    ? '1m'
+    : time_between < 1000 * 60 * 60
+    ? minutes
+    : hours;
+};
+
 const resetTime = ref('');
 
 const resetTimer = async () => {
@@ -216,6 +257,7 @@ const doubleDigit = (num) => {
 };
 
 const getReadableTime = reactive((time: string) => {
+  if (time == '') return 'No time set';
   const read = new Date(time);
   return `${read.toDateString()} ${doubleDigit(read.getHours())}:${doubleDigit(
     read.getMinutes()
@@ -260,12 +302,12 @@ onMounted(async () => {
     .order('created_at', { ascending: false })
     .limit(1);
 
-  console.log(resetData);
-
   trackerData?.map((d) => {
     tracking.value[d.name].push(d.created_at);
   });
 
-  resetTime.value = resetData[0].created_at;
+  if (resetData[0]) {
+    resetTime.value = resetData[0].created_at;
+  }
 });
 </script>
